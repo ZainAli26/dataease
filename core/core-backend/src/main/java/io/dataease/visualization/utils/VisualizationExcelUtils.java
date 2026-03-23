@@ -25,11 +25,7 @@ public class VisualizationExcelUtils {
     private static final String BASE_ROOT = getBaseRoot();
 
     public static String getBaseRoot() {
-        if (ModelUtils.isDesktop()) {
-            return ConfigUtils.getConfig("dataease.path.report", "/opt/dataease2.0/data/report/");
-        } else {
-            return "/opt/dataease2.0/data/report/";
-        }
+        return ConfigUtils.getConfig("dataease.path.report", "/opt/dataease2.0/data/report/");
     }
 
     public static File exportExcel(List<ExcelSheetModel> sheets, String fileName, String folderId) throws Exception {

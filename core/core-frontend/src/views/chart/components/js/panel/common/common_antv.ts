@@ -36,12 +36,8 @@ import type { PickOptions } from '@antv/g2plot/lib/core/plot'
 import { defaults, find } from 'lodash-es'
 import { useI18n } from '@/hooks/web/useI18n'
 import { isMobile } from '@/utils/utils'
-import { GaodeMap, TMap, TencentMap } from '@antv/l7-maps'
-import {
-  gaodeMapStyleOptions,
-  qqMapStyleOptions,
-  tdtMapStyleOptions
-} from '@/views/chart/components/js/panel/charts/map/common'
+import { GaodeMap as MapboxMap } from '@antv/l7-maps'
+import { osmMapStyleOptions } from '@/views/chart/components/js/panel/charts/map/common'
 import ChartCarouselTooltip, {
   isPie,
   isColumn,
@@ -1274,56 +1270,18 @@ export function configL7Zoom(
   if (!scene?.getControlByName('zoom')) {
     if (!scene.map) {
       scene.once('loaded', () => {
-        switch (mapKey?.mapType) {
-          case 'tianditu':
-            //天地图
-            {
-              const initZoom = basicStyle.autoFit === false ? basicStyle.zoomLevel : scene.getZoom()
-              const center =
-                basicStyle.autoFit === false
-                  ? [basicStyle.mapCenter.longitude, basicStyle.mapCenter.latitude]
-                  : [scene.map.getCenter().getLng(), scene.map.getCenter().getLat()]
-              const newZoomOptions = {
-                initZoom: initZoom,
-                center: center,
-                buttonColor: basicStyle.zoomButtonColor,
-                buttonBackground: basicStyle.zoomBackground
-              } as any
-              scene.addControl(new CustomZoom(newZoomOptions))
-            }
-            break
-          case 'qq':
-            {
-              const initZoom = basicStyle.autoFit === false ? basicStyle.zoomLevel : scene.getZoom()
-              const center =
-                basicStyle.autoFit === false
-                  ? [basicStyle.mapCenter.longitude, basicStyle.mapCenter.latitude]
-                  : [scene.map.getCenter().lng, scene.map.getCenter().lat]
-              const newZoomOptions = {
-                initZoom: initZoom,
-                center: center,
-                buttonColor: basicStyle.zoomButtonColor,
-                buttonBackground: basicStyle.zoomBackground
-              } as any
-              scene.addControl(new CustomZoom(newZoomOptions))
-            }
-            break
-          default:
-            scene.map.on('complete', () => {
-              const initZoom = basicStyle.autoFit === false ? basicStyle.zoomLevel : scene.getZoom()
-              const center =
-                basicStyle.autoFit === false
-                  ? [basicStyle.mapCenter.longitude, basicStyle.mapCenter.latitude]
-                  : [scene.map.getCenter().lng, scene.map.getCenter().lat]
-              const newZoomOptions = {
-                initZoom: initZoom,
-                center: center,
-                buttonColor: basicStyle.zoomButtonColor,
-                buttonBackground: basicStyle.zoomBackground
-              } as any
-              scene.addControl(new CustomZoom(newZoomOptions))
-            })
-        }
+        const initZoom = basicStyle.autoFit === false ? basicStyle.zoomLevel : scene.getZoom()
+        const center =
+          basicStyle.autoFit === false
+            ? [basicStyle.mapCenter.longitude, basicStyle.mapCenter.latitude]
+            : [scene.map.getCenter().lng, scene.map.getCenter().lat]
+        const newZoomOptions = {
+          initZoom: initZoom,
+          center: center,
+          buttonColor: basicStyle.zoomButtonColor,
+          buttonBackground: basicStyle.zoomBackground
+        } as any
+        scene.addControl(new CustomZoom(newZoomOptions))
       })
     } else {
       const newZoomOptions = {
@@ -1451,17 +1409,9 @@ export function mapRendering(dom: HTMLElement | string) {
   dom.classList.add('de-map-rendering')
 }
 
-export function qqMapRendered(scene?: Scene) {
-  if (scene?.map && scene.map.deMapProvider === 'qq') {
-    setTimeout(() => {
-      if (scene.map) {
-        scene.map.deMapAutoZoom = scene.map.getZoom()
-        scene.map.deMapAutoLng = scene.map.getCenter().getLng()
-        scene.map.deMapAutoLat = scene.map.getCenter().getLat()
-      }
-    }, 1000)
-  }
-}
+// No-op: kept for backward compatibility, was previously QQ map specific
+// eslint-disable-next-line @typescript-eslint/no-empty-function,@typescript-eslint/no-unused-vars
+export function qqMapRendered(scene?: Scene) {}
 
 export function mapRendered(dom: HTMLElement | string) {
   if (typeof dom === 'string') {
@@ -1482,40 +1432,9 @@ export function getMapCenter(basicStyle: ChartBasicStyle) {
   return center
 }
 
-export function getMapStyle(
-  mapKey: { key: string; securityCode: string; mapType: string },
-  basicStyle: ChartBasicStyle
-) {
-  let mapStyle: string
-  switch (mapKey.mapType) {
-    case 'tianditu':
-      if (!find(tdtMapStyleOptions, s => s.value === basicStyle.mapStyle)) {
-        mapStyle = 'normal'
-      } else {
-        mapStyle = basicStyle.mapStyle
-      }
-      break
-    case 'qq':
-      if (
-        !find(qqMapStyleOptions, s => s.value === basicStyle.mapStyle) ||
-        basicStyle.mapStyle === 'normal'
-      ) {
-        mapStyle = 'normal'
-      } else {
-        mapStyle = basicStyle.mapStyleUrl
-      }
-      break
-    default:
-      if (!find(gaodeMapStyleOptions, s => s.value === basicStyle.mapStyle)) {
-        basicStyle.mapStyle = 'normal'
-      }
-      mapStyle = basicStyle.mapStyleUrl
-      if (basicStyle.mapStyle !== 'custom') {
-        mapStyle = `amap://styles/${basicStyle.mapStyle ? basicStyle.mapStyle : 'normal'}`
-      }
-      break
-  }
-  return mapStyle
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getMapStyle(mapKey: any, basicStyle: any) {
+  return 'blank'
 }
 
 export async function getMapScene(
@@ -1525,157 +1444,80 @@ export async function getMapScene(
   mapKey: { key: string; securityCode: string; mapType: string },
   basicStyle: ChartBasicStyle,
   miscStyle: ChartMiscAttr,
-  mapStyle: string,
+  mapStyle: string | object,
   center?: [number, number]
 ) {
   if (!scene) {
+    // Mapbox/MapLibre crashes on zero-size containers ("failed to invert matrix")
+    // Force minimum dimensions on the container before creating the map
+    const el = typeof container === 'string' ? document.getElementById(container) : container
+    if (el && (el.clientWidth === 0 || el.clientHeight === 0)) {
+      if (!el.style.width || el.clientWidth === 0) el.style.width = '100%'
+      if (!el.style.height || el.clientHeight === 0) el.style.height = '100%'
+      // If still zero (parent has no height), set absolute values
+      if (el.clientWidth === 0) el.style.width = '800px'
+      if (el.clientHeight === 0) el.style.height = '600px'
+    }
     scene = new Scene({
       id: container,
       logoVisible: false,
       map: getMapObject(mapKey, basicStyle, miscStyle, mapStyle, center)
     })
   } else {
-    if (mapKey.mapType === 'tianditu') {
-      scene.map?.checkResize()
-    }
     if (scene.getLayers()?.length) {
       await scene.removeAllLayer()
       try {
         scene.setPitch(miscStyle.mapPitch)
       } catch (e) {}
-      if (mapKey.mapType === 'tianditu') {
-        if (mapStyle === 'normal') {
-          scene.map?.removeStyle()
-        } else {
-          scene.setMapStyle(mapStyle)
-        }
-      } else {
+      if (typeof mapStyle === 'string') {
         scene.setMapStyle(mapStyle)
       }
-
       scene.map.showLabel = !(basicStyle.showLabel === false)
-      if (mapKey.mapType === 'qq') {
-        scene.map.setBaseMap({
-          //底图设置（参数为：VectorBaseMap对象）
-          type: 'vector', //类型：失量底图
-          features: basicStyle.showLabel === false ? ['base', 'building2d'] : undefined
-          //仅渲染：道路及底面(base) + 2d建筑物(building2d)，以达到隐藏文字的效果
-        })
-      }
     }
     if (basicStyle.autoFit === false) {
       scene.setZoomAndCenter(basicStyle.zoomLevel, center)
-      if (mapKey.mapType === 'qq') {
-        scene.map.deMapAutoFit = false
-        scene.map.deMapZoom = basicStyle.zoomLevel
-        scene.map.deMapCenter = center
-      }
     }
   }
   mapRendering(container)
   scene.once('loaded', () => {
     mapRendered(container)
-    if (mapKey.mapType === 'qq') {
-      scene.map.setBaseMap({
-        //底图设置（参数为：VectorBaseMap对象）
-        type: 'vector', //类型：失量底图
-        features: basicStyle.showLabel === false ? ['base', 'building2d'] : undefined
-        //仅渲染：道路及底面(base) + 2d建筑物(building2d)，以达到隐藏文字的效果
-      })
-      scene.setMapStyle(mapStyle)
-
-      scene.map.deMapProvider = 'qq'
-      scene.map.deMapAutoFit = !!basicStyle.autoFit
-      // scene.map.deMapAutoZoom = scene.map.getZoom()
-      // scene.map.deMapAutoLng = scene.map.getCenter().getLng()
-      // scene.map.deMapAutoLat = scene.map.getCenter().getLat()
-    }
-    // 去除天地图自己的缩放按钮
-    if (mapKey.mapType === 'tianditu') {
-      if (mapStyle === 'normal') {
-        scene.map?.removeStyle()
-      } else {
-        scene.setMapStyle(mapStyle)
-      }
-
-      const tdtControl = document.querySelector(
-        `#component${chart.id} .tdt-control-zoom.tdt-bar.tdt-control`
-      )
-      if (tdtControl) {
-        tdtControl.style.display = 'none'
-      }
-      const tdtControlOuter = document.querySelectorAll(
-        `#wrapper-outer-id-${chart.id} .tdt-control-zoom.tdt-bar.tdt-control`
-      )
-      if (tdtControlOuter && tdtControlOuter.length > 0) {
-        for (let i = 0; i < tdtControlOuter.length; i++) {
-          tdtControlOuter[i].style.display = 'none'
-        }
-      }
-      const tdtCopyrightControl = document.querySelector(
-        `#component${chart.id} .tdt-control-copyright.tdt-control`
-      )
-      if (tdtCopyrightControl) {
-        tdtCopyrightControl.style.display = 'none'
-      }
-      const tdtCopyrightControlOuter = document.querySelectorAll(
-        `#wrapper-outer-id-${chart.id} .tdt-control-copyright.tdt-control`
-      )
-      if (tdtCopyrightControlOuter && tdtCopyrightControlOuter.length > 0) {
-        for (let i = 0; i < tdtCopyrightControlOuter.length; i++) {
-          tdtCopyrightControlOuter[i].style.display = 'none'
-        }
-      }
-    }
+    // Add OSM raster tile layer as base map
+    addOsmTileLayer(scene, mapKey)
   })
   return scene
+}
+
+async function addOsmTileLayer(scene: Scene, mapKey?: any) {
+  try {
+    const tileUrl = mapKey?.key
+    // prettier-ignore
+    const url = tileUrl || 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    const { RasterLayer } = await import('@antv/l7-layers')
+    const layer = new RasterLayer({ zIndex: -1 }).source(url, {
+      parser: { type: 'rasterTile', tileSize: 256, zoomOffset: 0 }
+    })
+    scene.addLayer(layer)
+  } catch (e) {
+    console.warn('[DE-Map] Failed to add OSM tile layer:', e)
+  }
 }
 
 export function getMapObject(
   mapKey: { key: string; securityCode: string; mapType: string },
   basicStyle: ChartBasicStyle,
   miscStyle: ChartMiscAttr,
-  mapStyle: string,
+  mapStyle: string | object,
   center?: [number, number]
 ) {
-  switch (mapKey.mapType) {
-    case 'tianditu':
-      return new TMap({
-        token: mapKey?.key ?? undefined,
-        style: mapStyle, //不生效
-        pitch: undefined, //不支持
-        center,
-        zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : undefined,
-        showLabel: !(basicStyle.showLabel === false), //不支持
-        WebGLParams: {
-          preserveDrawingBuffer: true // 不支持
-        }
-      })
-    case 'qq':
-      return new TencentMap({
-        token: mapKey?.key ?? undefined,
-        style: mapStyle,
-        pitch: miscStyle.mapPitch,
-        center,
-        zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : 12,
-        showLabel: !(basicStyle.showLabel === false),
-        renderOptions: {
-          preserveDrawingBuffer: true
-        }
-      })
-    default:
-      return new GaodeMap({
-        token: mapKey?.key ?? undefined,
-        style: mapStyle,
-        pitch: miscStyle.mapPitch,
-        center,
-        zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : undefined,
-        showLabel: !(basicStyle.showLabel === false),
-        WebGLParams: {
-          preserveDrawingBuffer: true
-        }
-      })
-  }
+  return new MapboxMap({
+    style: mapStyle,
+    pitch: miscStyle.mapPitch,
+    center,
+    zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : undefined,
+    WebGLParams: {
+      preserveDrawingBuffer: true
+    }
+  })
 }
 /**
  * 隐藏缩放控件
@@ -2527,42 +2369,30 @@ function onlineMapStatusOption(chart: Chart, mapType: string, scene: Scene, enab
  * @param enable
  */
 function setMapStatusOption(chart: Chart, mapType: string, scene: Scene, enable = false) {
-  switch (mapType) {
-    case 'tianditu': {
-      const method = enable ? 'enable' : 'disable'
-      scene.map?.[`${method}Drag`]()
-      scene.map?.[`${method}ScrollWheelZoom`]()
-      scene.map?.[`${method}DoubleClickZoom`]()
-      scene.map?.[`${method}Keyboard`]()
-      scene.map?.[`${method}PinchToZoom`]()
-      break
+  // Mapbox GL generic controls
+  const map = scene.map
+  if (map) {
+    if (enable) {
+      map['dragPan']?.enable()
+      map['scrollZoom']?.enable()
+      map['doubleClickZoom']?.enable()
+      map['dragRotate']?.enable()
+      map['touchPitch']?.enable()
+      map['touchZoomRotate']?.enable()
+    } else {
+      map['dragPan']?.disable()
+      map['scrollZoom']?.disable()
+      map['doubleClickZoom']?.disable()
+      map['dragRotate']?.disable()
+      map['touchPitch']?.disable()
+      map['touchZoomRotate']?.disable()
     }
-    case 'qq':
-      scene.map?.setDraggable(enable)
-      scene.map?.setScrollable(enable)
-      scene.map?.setDoubleClickZoom(enable)
-      scene.map?.setTouchZoomable(enable)
-      scene.map?.setPitchable(enable)
-      scene.map?.setRotatable(enable)
-      break
-    default:
-      scene.map?.setStatus({
-        dragEnable: enable,
-        keyboardEnable: enable,
-        doubleClickZoom: enable,
-        rotateEnable: enable,
-        pitchEnable: enable,
-        scrollWheel: enable,
-        touchZoom: false
-      } as any)
   }
   if (!isMobile()) return
-  const isSpecialMap = mapType === 'qq' || mapType === 'tianditu'
   const baseSceneEl = scene
     .getServiceContainer?.()
     .sceneService?.getSceneContainer() as HTMLElement | null
-  const sceneEl = isSpecialMap ? document.getElementById(chart.container) : baseSceneEl
-  if (sceneEl) {
-    sceneEl.style.pointerEvents = isSpecialMap ? 'none' : 'auto'
+  if (baseSceneEl) {
+    baseSceneEl.style.pointerEvents = 'auto'
   }
 }

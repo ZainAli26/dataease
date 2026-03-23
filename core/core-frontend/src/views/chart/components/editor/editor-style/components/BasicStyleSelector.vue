@@ -21,6 +21,7 @@ import { useMapStoreWithOut } from '@/store/modules/map'
 import { queryMapKeyApi } from '@/api/setting/sysParameter'
 import {
   gaodeMapStyleOptions,
+  osmMapStyleOptions,
   qqMapStyleOptions,
   tdtMapStyleOptions
 } from '@/views/chart/components/js/panel/charts/map/common'
@@ -338,8 +339,10 @@ const mapStyleOptions = computed(() => {
       return tdtMapStyleOptions
     case 'qq':
       return qqMapStyleOptions
+    case 'osm':
+      return osmMapStyleOptions
     default:
-      return gaodeMapStyleOptions
+      return osmMapStyleOptions
   }
 })
 

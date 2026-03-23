@@ -1,0 +1,10 @@
+# Downloaded tile data (can be very large)
+data/*.mbtiles
+data/*.pbf
+
+# Downloaded fonts and styles (setup via README instructions)
+data/fonts/
+data/styles/
+
+# LibreOffice lock files
+.~lock.*

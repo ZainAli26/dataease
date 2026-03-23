@@ -1,0 +1,26 @@
+{
+  "options": {
+    "paths": {
+      "root": "/data",
+      "fonts": "fonts",
+      "styles": "styles",
+      "mbtiles": "/data"
+    },
+    "maxScaleFactor": 3,
+    "serveStaticMaps": false
+  },
+  "styles": {
+    "osm-bright": {
+      "style": "osm-bright/style.json"
+    },
+    "osm-raster": {
+      "style": "osm-raster/style.json",
+      "serve_rendered": false
+    }
+  },
+  "data": {
+    "v3": {
+      "mbtiles": "tiles.mbtiles"
+    }
+  }
+}

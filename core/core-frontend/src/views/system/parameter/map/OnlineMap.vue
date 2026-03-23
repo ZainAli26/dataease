@@ -14,53 +14,33 @@
             </div>
             <div class="map-item">
               <el-select v-model="mapEditor.mapType" @change="initLoad">
-                <el-option value="gaode" :label="t('chart.map_type_gaode')" />
-                <el-option value="tianditu" :label="t('chart.map_type_tianditu')" />
-                <!--                <el-option value="baidu" :label="t('chart.map_type_baidu')" />-->
-                <el-option value="qq" :label="t('chart.map_type_tencent')" />
+                <el-option value="osm" label="OpenStreetMap" />
               </el-select>
             </div>
             <div class="map-item">
               <div class="map-item-label">
-                <span class="form-label">Key</span>
+                <span class="form-label">{{
+                  t('online_map.tile_url') || 'Tile URL (optional)'
+                }}</span>
               </div>
             </div>
             <div class="map-item">
-              <el-input v-model="mapEditor.key" />
-            </div>
-            <div class="map-item">
-              <div class="map-item-label">
-                <span class="form-label">{{ t('chart.security_code') }}</span>
-              </div>
-            </div>
-            <div class="map-item">
-              <el-input v-model="mapEditor.securityCode" />
+              <el-input
+                v-model="mapEditor.key"
+                placeholder="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
             </div>
           </div>
         </el-col>
       </el-row>
       <el-row>
-        <el-button type="primary" :disabled="!mapEditor.key" @click="saveHandler">
+        <el-button type="primary" @click="saveHandler">
           {{ t('commons.save') }}
         </el-button>
       </el-row>
     </el-aside>
-    <el-main v-loading="mapLoading">
-      <OnlineMapGaode
-        v-if="!mapLoading && mapLoaded && mapEditor.key && mapEditor.mapType === 'gaode'"
-        :map-key="mapEditor.key"
-        :security-code="mapEditor.securityCode"
-      />
-      <OnlineMapTdt
-        v-if="!mapLoading && mapLoaded && mapEditor.key && mapEditor.mapType === 'tianditu'"
-        :map-key="mapEditor.key"
-        :security-code="mapEditor.securityCode"
-      />
-      <OnlineMapQQ
-        v-if="!mapLoading && mapLoaded && mapEditor.key && mapEditor.mapType === 'qq'"
-        :map-key="mapEditor.key"
-        :security-code="mapEditor.securityCode"
-      />
+    <el-main v-loading="mapLoading" style="position: relative">
+      <OnlineMapOSM v-if="!mapLoading && mapLoaded" :tile-url="mapEditor.key" />
       <EmptyBackground
         v-if="!mapLoaded"
         img-type="noneWhite"
@@ -76,9 +56,7 @@ import { useI18n } from '@/hooks/web/useI18n'
 import { queryMapKeyApi, saveMapKeyApi, queryMapKeyApiByType } from '@/api/setting/sysParameter'
 import { ElMessage } from 'element-plus-secondary'
 import EmptyBackground from '@/components/empty-background/src/EmptyBackground.vue'
-import OnlineMapTdt from './OnlineMapTdt.vue'
-import OnlineMapGaode from './OnlineMapGaode.vue'
-import OnlineMapQQ from './OnlineMapQQ.vue'
+import OnlineMapOSM from './OnlineMapOSM.vue'
 
 const { t } = useI18n()
 const mapEditor = reactive({
@@ -110,13 +88,12 @@ const initLoad = (type?: string) => {
     f = queryMapKeyApi()
   }
   f.then(res => {
-    mapEditor.key = res.data.key
-    mapEditor.mapType = res.data.mapType
-    mapEditor.securityCode = res.data.securityCode
+    mapEditor.key = res.data.key || ''
+    mapEditor.mapType = res.data.mapType || 'osm'
+    mapEditor.securityCode = res.data.securityCode || ''
 
-    if (mapEditor.key) {
-      mapLoaded.value = true
-    }
+    // OSM doesn't require a key, always show the map
+    mapLoaded.value = true
   })
     .catch(e => {
       console.error(e)

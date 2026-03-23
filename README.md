@@ -113,6 +113,67 @@ curl -sSL https://dataease.oss-cn-hangzhou.aliyuncs.com/quick_start_v2.sh | bash
 - [Halo](https://github.com/halo-dev/halo/) - 强大易用的开源建站工具
 - [MeterSphere](https://github.com/metersphere/metersphere/) - 新一代的开源持续测试工具
 
+## OpenStreetMap Offline Maps Setup
+
+This fork replaces the original Chinese map providers (Gaode/Amap, Tianditu, Tencent) with **OpenStreetMap**. Maps work both online and fully offline.
+
+For complete setup instructions, see [osm-tileserver/README.md](osm-tileserver/README.md).
+
+### Quick Start (Offline Maps)
+
+Prerequisites: Docker, Python3, wget, unzip, tar
+
+```bash
+# 1. Download your region's MBTiles from https://www.maptiler.com/on-prem-datasets/dataset/osm/
+#    Place it as osm-tileserver/data/tiles.mbtiles
+
+# 2. Download style
+wget -O /tmp/osm-bright.zip "https://github.com/openmaptiles/osm-bright-gl-style/releases/download/v1.9/v1.9.zip"
+mkdir -p osm-tileserver/data/styles/osm-bright
+cd /tmp && unzip -o osm-bright.zip -d osm-bright
+cp osm-bright/sprite*.json osm-bright/sprite*.png <path-to>/osm-tileserver/data/styles/osm-bright/
+cp osm-bright/style-local.json <path-to>/osm-tileserver/data/styles/osm-bright/style.json
+
+# 3. Fix style to use local data
+python3 -c "
+import json
+with open('<path-to>/osm-tileserver/data/styles/osm-bright/style.json') as f:
+    s = json.load(f)
+s['sources']['openmaptiles'] = {'type': 'vector', 'url': 'mbtiles://{v3}'}
+s['glyphs'] = '{fontstack}/{range}.pbf'
+s['sprite'] = '{styleJsonFolder}/sprite'
+with open('<path-to>/osm-tileserver/data/styles/osm-bright/style.json', 'w') as f:
+    json.dump(s, f, indent=2)
+"
+
+# 4. Download fonts
+wget -O /tmp/fonts.tar.gz "https://github.com/klokantech/klokantech-gl-fonts/archive/refs/heads/master.tar.gz"
+mkdir -p osm-tileserver/data/fonts
+cd /tmp && tar xzf fonts.tar.gz
+cp -r klokantech-gl-fonts-master/* <path-to>/osm-tileserver/data/fonts/
+cd <path-to>/osm-tileserver/data/fonts
+ln -sf "KlokanTech Noto Sans Bold" "Noto Sans Bold"
+ln -sf "KlokanTech Noto Sans Regular" "Noto Sans Regular"
+ln -sf "KlokanTech Noto Sans Italic" "Noto Sans Italic"
+
+# 5. Start tile server
+docker run -d --name dataease-tileserver --restart unless-stopped \
+  -p 8480:8080 -v <path-to>/osm-tileserver/data:/data \
+  maptiler/tileserver-gl --config /data/config.json
+
+# 6. In DataEase: System Settings > Map Settings, set Tile URL to:
+#    http://localhost:8480/styles/osm-bright/{z}/{x}/{y}.png
+```
+
+### Online vs Offline
+
+| Mode | Tile URL Setting |
+|------|-----------------|
+| **Offline** | `http://localhost:8480/styles/osm-bright/{z}/{x}/{y}.png` |
+| **Online** | Leave blank (uses OpenStreetMap servers automatically) |
+
+------------------------------
+
 ## License
 
 Copyright (c) 2014-2026 [FIT2CLOUD 飞致云](https://fit2cloud.com/), All rights reserved.

@@ -15,7 +15,7 @@ export const useMapStore = defineStore('map', {
     mapKey: {
       key: '',
       securityCode: '',
-      mapType: ''
+      mapType: 'osm'
     }
   }),
   actions: {

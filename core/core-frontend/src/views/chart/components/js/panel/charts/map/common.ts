@@ -55,27 +55,15 @@ export const MAP_AXIS_TYPE: AxisType[] = [
   'extTooltip'
 ]
 
-export const gaodeMapStyleOptions = [
-  { name: t('chart.map_style_normal'), value: 'normal' },
-  { name: t('chart.map_style_darkblue'), value: 'darkblue' },
-  { name: t('chart.map_style_light'), value: 'light' },
-  { name: t('chart.map_style_dark'), value: 'dark' },
-  { name: t('chart.map_style_fresh'), value: 'fresh' },
-  { name: t('chart.map_style_grey'), value: 'grey' },
-  { name: t('chart.map_style_blue'), value: 'blue' },
-  { name: t('commons.custom'), value: 'custom' }
-]
-
-export const tdtMapStyleOptions = [
-  { name: t('chart.map_style_normal'), value: 'normal' },
-  { name: t('chart.map_style_dark'), value: 'black' },
-  { name: t('chart.map_style_darkblue'), value: 'indigo' }
-]
-
-export const qqMapStyleOptions = [
+export const osmMapStyleOptions = [
   { name: t('chart.map_style_normal'), value: 'normal' },
   { name: t('commons.custom'), value: 'custom' }
 ]
+
+// Keep legacy exports for backward compatibility
+export const gaodeMapStyleOptions = osmMapStyleOptions
+export const tdtMapStyleOptions = osmMapStyleOptions
+export const qqMapStyleOptions = osmMapStyleOptions
 
 export declare type MapMouseEvent = MouseEvent & {
   feature: GeoJSON.Feature
