@@ -2,9 +2,8 @@
 data/*.mbtiles
 data/*.pbf
 
-# Downloaded fonts and styles (setup via README instructions)
+# Downloaded fonts (setup via README instructions)
 data/fonts/
-data/styles/
 
 # LibreOffice lock files
 .~lock.*
