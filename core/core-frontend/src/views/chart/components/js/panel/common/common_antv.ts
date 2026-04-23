@@ -1463,6 +1463,11 @@ export async function getMapScene(
       logoVisible: false,
       map: getMapObject(mapKey, basicStyle, miscStyle, mapStyle, center)
     })
+    mapRendering(container)
+    scene.once('loaded', () => {
+      mapRendered(container)
+      addOsmTileLayer(scene, mapKey)
+    })
   } else {
     if (scene.getLayers()?.length) {
       await scene.removeAllLayer()
@@ -1477,13 +1482,10 @@ export async function getMapScene(
     if (basicStyle.autoFit === false) {
       scene.setZoomAndCenter(basicStyle.zoomLevel, center)
     }
-  }
-  mapRendering(container)
-  scene.once('loaded', () => {
-    mapRendered(container)
-    // Add OSM raster tile layer as base map
+    // Re-add OSM tile layer immediately — the scene is already loaded,
+    // so scene.once('loaded') would never fire again
     addOsmTileLayer(scene, mapKey)
-  })
+  }
   return scene
 }
 
