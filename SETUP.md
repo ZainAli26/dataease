@@ -68,7 +68,16 @@ redis-cli -a 123456 ping
 
 ## 3. Backend Setup
 
-### 3.1 Install SDK Modules
+### 3.1 Create Data Directories
+
+The backend writes logs, cache, and data files to `/opt/dataease2.0/` by default. Create these directories first:
+
+```bash
+sudo mkdir -p /opt/dataease2.0/{cache,logs/dataease,data/{excel,font,report,static-resource,exportData},drivers,custom-drivers}
+sudo chown -R $USER:$USER /opt/dataease2.0
+```
+
+### 3.2 Install SDK Modules
 
 From the project root:
 
@@ -80,7 +89,18 @@ cd ..
 
 This installs all SDK sub-modules (`common`, `api-base`, `api-permissions`, `extensions-*`, etc.) to your local Maven repository.
 
-### 3.2 Run the Backend
+### 3.3 Build the Frontend (required before backend)
+
+The backend build copies the frontend's `dist/` folder into its static resources. You must build the frontend first:
+
+```bash
+cd core/core-frontend
+npm install
+npm run build:base
+cd ../..
+```
+
+### 3.4 Run the Backend
 
 ```bash
 cd core/core-backend

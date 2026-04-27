@@ -36,7 +36,7 @@ import type { PickOptions } from '@antv/g2plot/lib/core/plot'
 import { defaults, find } from 'lodash-es'
 import { useI18n } from '@/hooks/web/useI18n'
 import { isMobile } from '@/utils/utils'
-import { GaodeMap as MapboxMap } from '@antv/l7-maps'
+import { Map as MapboxMap } from '@antv/l7-maps'
 import { osmMapStyleOptions } from '@/views/chart/components/js/panel/charts/map/common'
 import ChartCarouselTooltip, {
   isPie,
@@ -1447,6 +1447,9 @@ export async function getMapScene(
   mapStyle: string | object,
   center?: [number, number]
 ) {
+  // Pre-load RasterLayer module so it's ready when needed
+  const RasterLayerModule = await import('@antv/l7-layers').catch(() => null)
+
   if (!scene) {
     // Mapbox/MapLibre crashes on zero-size containers ("failed to invert matrix")
     // Force minimum dimensions on the container before creating the map
@@ -1466,7 +1469,7 @@ export async function getMapScene(
     mapRendering(container)
     scene.once('loaded', () => {
       mapRendered(container)
-      addOsmTileLayer(scene, mapKey)
+      addOsmTileLayer(scene, mapKey, RasterLayerModule)
     })
   } else {
     if (scene.getLayers()?.length) {
@@ -1484,18 +1487,18 @@ export async function getMapScene(
     }
     // Re-add OSM tile layer immediately — the scene is already loaded,
     // so scene.once('loaded') would never fire again
-    addOsmTileLayer(scene, mapKey)
+    addOsmTileLayer(scene, mapKey, RasterLayerModule)
   }
   return scene
 }
 
-async function addOsmTileLayer(scene: Scene, mapKey?: any) {
+function addOsmTileLayer(scene: Scene, mapKey?: any, RasterLayerModule?: any) {
   try {
+    if (!RasterLayerModule) return
     const tileUrl = mapKey?.key
-    // prettier-ignore
-    const url = tileUrl || 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'
-    const { RasterLayer } = await import('@antv/l7-layers')
-    const layer = new RasterLayer({ zIndex: -1 }).source(url, {
+    if (!tileUrl) return // No tile URL configured — skip, markers still render on blank canvas
+    const { RasterLayer } = RasterLayerModule
+    const layer = new RasterLayer({ zIndex: -1 }).source(tileUrl, {
       parser: { type: 'rasterTile', tileSize: 256, zoomOffset: 0 }
     })
     scene.addLayer(layer)
@@ -1514,8 +1517,8 @@ export function getMapObject(
   return new MapboxMap({
     style: mapStyle,
     pitch: miscStyle.mapPitch,
-    center,
-    zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : undefined,
+    center: center || [0, 0],
+    zoom: basicStyle.autoFit === false ? basicStyle.zoomLevel : 2,
     WebGLParams: {
       preserveDrawingBuffer: true
     }
